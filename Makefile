@@ -31,7 +31,7 @@ app: $(BUILD)/.signed
 
 # Ad-hoc sign only when something in the bundle changed.
 $(BUILD)/.signed: $(BINARY) $(RESOURCES)
-	@codesign --force --sign - $(BUNDLE)
+	@codesign --force --sign - --timestamp=none $(BUNDLE)
 	@touch $@
 	@echo "Built $(BUNDLE) ($$(du -sh $(BUNDLE) | cut -f1))"
 
