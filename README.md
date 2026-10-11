@@ -24,7 +24,8 @@ the essentials well, looks at home on macOS, and stays out of the way:
 | CPU, idle (% of one core)        | **0.1–0.3 %**   | ≈ 4 %                                  |
 
 <sub>Measured side by side on an Apple Silicon MacBook Pro running macOS 27. Watcher stays at about 10 MB while
-its popup is open and after it closes, and uses up to ≈ 1 % CPU with live core bars on a busy machine.</sub>
+its popup is open and after it closes, and uses up to ≈ 1 % CPU with live core bars on a busy machine. The
+release download is 220 KB: GitHub builds it on macOS 26, whose code signing tool pads the signature.</sub>
 
 Watcher is **free and open source** under the MIT License. There are no accounts, no telemetry and no ads,
 and it never connects to the internet.

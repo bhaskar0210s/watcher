@@ -17,7 +17,7 @@ TARGET    := -arch $(ARCH) -mmacosx-version-min=$(MIN_MACOS)
 # Size first: -Os, link-time optimisation, no C++ exceptions or RTTI (unused).
 CXXFLAGS  += $(TARGET) -std=c++20 -Os -flto -fno-exceptions -fno-rtti -Wall -Wextra -Wshadow -fvisibility=hidden -MMD -MP
 OBJCFLAGS := -fobjc-arc
-LDFLAGS   += $(TARGET) -flto -dead_strip -Wl,-no_adhoc_codesign
+LDFLAGS   += $(TARGET) -flto -dead_strip
 LIBS      := -framework AppKit -framework IOKit -framework ServiceManagement -framework ImageIO -framework QuartzCore
 
 ICON      := resources/$(APP).icns
