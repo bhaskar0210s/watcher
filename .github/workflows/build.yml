@@ -1,0 +1,22 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: make
+      - name: Smoke test (sample for 2 s and render every tab)
+        run: build/Watcher.app/Contents/MacOS/Watcher --snapshot "$RUNNER_TEMP/snapshot" 2
+      - name: Package
+        run: ditto -c -k --keepParent build/Watcher.app Watcher.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Watcher
+          path: Watcher.zip
