@@ -119,12 +119,7 @@ CGFloat backingScale(NSWindow* window) {
 @implementation WTPopupView
 
 - (instancetype)initWithFrame:(NSRect)frame {
-    if ((self = [super initWithFrame:frame])) {
-        // System colors are Display P3, which makes Core Animation pick a 64-bit
-        // float backing store (double-buffered, ~10 MB at this size). 8-bit is plenty.
-        self.wantsLayer = YES;
-        self.layer.contentsFormat = kCAContentsFormatRGBA8Uint;
-    }
+    if ((self = [super initWithFrame:frame])) self.wantsLayer = YES;
     return self;
 }
 
@@ -148,11 +143,32 @@ CGFloat backingScale(NSWindow* window) {
     [self addTrackingArea:[[NSTrackingArea alloc] initWithRect:NSZeroRect options:options owner:self userInfo:nil]];
 }
 
-- (void)drawRect:(NSRect)dirtyRect {
-    CGContextRef g = NSGraphicsContext.currentContext.CGContext;
-    const Theme& t = gThemes.forAppearance(self.effectiveAppearance);
-    _content.scale = backingScale(self.window);
-    _layout = renderPopup(g, _content, _hover, t);  // transparent: the popover material shows through
+// The popup is drawn on the CPU into a plain image in the display's colour space,
+// which Core Animation shows as is. Drawing through drawRect: instead lets Core
+// Animation rasterise on the GPU from inside Watcher, which loads Metal and keeps
+// several megabytes of GPU buffers for the rest of the app's life.
+- (BOOL)wantsUpdateLayer {
+    return YES;
+}
+
+- (void)updateLayer {
+    const CGFloat scale = backingScale(self.window);
+    const CGSize size = NSSizeToCGSize(self.bounds.size);
+    CFRef<CGColorSpaceRef> space = CFRef<CGColorSpaceRef>::retain(self.window.colorSpace.CGColorSpace);
+    if (!space) space = CFRef<CGColorSpaceRef>(CGColorSpaceCreateWithName(kCGColorSpaceSRGB));
+    CFRef<CGContextRef> g(CGBitmapContextCreate(
+        nullptr, size_t(std::ceil(size.width * scale)), size_t(std::ceil(size.height * scale)), 8, 0, space.get(),
+        uint32_t(kCGImageAlphaPremultipliedFirst) | uint32_t(kCGBitmapByteOrder32Host)));
+    if (!g) return;
+    CGContextScaleCTM(g.get(), scale, scale);
+    CGContextTranslateCTM(g.get(), 0, size.height);  // y-down, like the view
+    CGContextScaleCTM(g.get(), 1, -1);
+    CGContextSetShouldSmoothFonts(g.get(), false);  // as AppKit draws text on a transparent layer
+    _content.scale = scale;
+    _layout = renderPopup(g.get(), _content, _hover, gThemes.forAppearance(self.effectiveAppearance));
+    CFRef<CGImageRef> image(CGBitmapContextCreateImage(g.get()));
+    self.layer.contentsScale = scale;
+    self.layer.contents = (__bridge id)image.get();  // transparent: the popover material shows through
 }
 
 - (BOOL)isOverHoverArea:(CGPoint)point {
@@ -361,9 +377,9 @@ CGFloat backingScale(NSWindow* window) {
     _engine->tick(_panel || _tab == Tab::Sensors, _panel && _tab == Tab::Sensors);  // see Engine::tick
     [self refreshWidget];
     if (_panel) {
-        [self refreshProcesses];
         [self placePopup];
-        _popup.needsDisplay = YES;
+        // The CPU and RAM tabs redraw once their process list arrives, a few ms later.
+        if (![self refreshProcesses]) _popup.needsDisplay = YES;
     }
 }
 
@@ -412,8 +428,9 @@ CGFloat backingScale(NSWindow* window) {
 
     // Tabs switch on touch, so open with the menu button (not a tab) right under
     // the icon: moving straight down into the popup doesn't flip tabs by accident.
-    const CGRect menu = renderPopup(nullptr, _popup->_content, {}, gThemes.get(true)).menuButton;
     NSStatusBarButton* button = _item.button;
+    const Theme& theme = gThemes.forAppearance(button.effectiveAppearance);
+    const CGRect menu = renderPopup(nullptr, _popup->_content, {}, theme).menuButton;
     const NSRect anchor = [button.window convertRectToScreen:[button convertRect:button.bounds toView:nil]];
     const NSRect screen = (button.window.screen ?: NSScreen.mainScreen).frame;
     _popupX = std::round(NSMidX(anchor) - CGRectGetMidX(menu));
@@ -502,11 +519,13 @@ CGFloat backingScale(NSWindow* window) {
 
 #pragma mark Processes
 
-- (void)refreshProcesses {
+// Samples the open tab's processes in the background and redraws the popup when
+// they arrive. Returns NO if no new sample was started.
+- (BOOL)refreshProcesses {
     const Tab tab = _tab;
-    if (!_panel || (tab != Tab::Cpu && tab != Tab::Ram)) return;
+    if (!_panel || (tab != Tab::Cpu && tab != Tab::Ram)) return NO;
     if (tab == Tab::Ram) [self refreshForeignSnapshot];
-    if (_processBusy) return;
+    if (_processBusy) return NO;
     _processBusy = YES;
 
     const size_t slots = processSlots(tab);
@@ -527,6 +546,7 @@ CGFloat backingScale(NSWindow* window) {
             }
         });
     });
+    return YES;
 }
 
 // WindowServer & co. belong to other users; only setuid `top` can see their
@@ -593,11 +613,7 @@ CGFloat backingScale(NSWindow* window) {
 
 - (void)showAbout:(id)sender {
     [self closePopup];
-    if (@available(macOS 14, *)) {
-        [NSApp activate];
-    } else {
-        [NSApp activateIgnoringOtherApps:YES];
-    }
+    [NSApp activate];
     [NSApp orderFrontStandardAboutPanel:nil];
 }
 

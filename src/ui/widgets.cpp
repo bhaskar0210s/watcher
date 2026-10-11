@@ -24,16 +24,10 @@ CGFloat graphicWidth(const WidgetData& data) {
     return n * kBarWidth + (n - 1) * kBarGap;
 }
 
-// Wide enough for "100%" so the item never changes width as values move.
-CGFloat valueWidth(const Theme& t) {
-    CFRef<CTLineRef> widest = makeLine("100%", {t.menuValueFont.get(), t.menuText.get()});
-    return std::ceil(lineWidth(widest.get()));
-}
-
 }  // namespace
 
 CGFloat widgetWidth(const WidgetData& data, const Theme& t) {
-    return graphicWidth(data) + kSpacing + valueWidth(t);
+    return graphicWidth(data) + kSpacing + t.menuValueWidth;
 }
 
 void drawWidget(CGContextRef g, CGSize size, const WidgetData& data, const Theme& t) {

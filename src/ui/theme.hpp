@@ -27,6 +27,8 @@ struct Theme {
 
     CFRef<CTFontRef> heroFont, heroUnitFont, heroTitleFont, captionFont, cardTitleFont, rowFont, rowValueFont,
         smallFont, smallValueFont, tabNameFont, tabValueFont, menuValueFont;
+    // Width of the widest menu bar number ("100%"), so the item never changes width.
+    CGFloat menuValueWidth = 0;
 
     // SF Symbols for the CPU / RAM / GPU / Sensors tabs (plain and selected), the
     // menu bar, and the "more" button.

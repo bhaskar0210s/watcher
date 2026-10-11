@@ -87,7 +87,9 @@ int main(int argc, char** argv) {
     }
     const std::string dir = argv[1];
     // Sizes above 256pt@2x are left out on purpose: Finder scales up, and the app stays small.
-    const struct { int points, scale; } sizes[] = {{16, 1}, {16, 2}, {32, 1}, {32, 2}, {128, 1}, {128, 2}, {256, 1}, {256, 2}};
+    // 16pt@2x and 256pt@1x are left out too: macOS picks icons by pixel size, and
+    // 32pt@1x and 128pt@2x already provide those exact images.
+    const struct { int points, scale; } sizes[] = {{16, 1}, {32, 1}, {32, 2}, {128, 1}, {128, 2}, {256, 2}};
     for (const auto& size : sizes) {
         char name[64];
         snprintf(name, sizeof(name), "/icon_%dx%d%s.png", size.points, size.points, size.scale == 2 ? "@2x" : "");

@@ -1,5 +1,6 @@
 #include "platform.hpp"
 
+#include "../ui/canvas.hpp"
 #include "../ui/format.hpp"
 
 #include <cmath>
@@ -99,6 +100,7 @@ Theme makeTheme(bool dark) {
     t.tabNameFont = makeFont(11, NSFontWeightMedium);
     t.tabValueFont = makeFont(14, NSFontWeightSemibold, false, true);
     t.menuValueFont = makeFont(13, NSFontWeightMedium, false, true);
+    t.menuValueWidth = std::ceil(lineWidth(makeLine("100%", {t.menuValueFont.get(), t.menuText.get()}).get()));
 
     static NSString* const symbols[] = {@"cpu", @"memorychip", @"triangle", @"thermometer.medium"};
     for (size_t i = 0; i < 4; ++i) {

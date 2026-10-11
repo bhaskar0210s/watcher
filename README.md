@@ -3,7 +3,7 @@
 <h1 align="center">Watcher</h1>
 
 <p align="center"><b>A quiet, native system monitor for your Mac's menu bar.</b><br>
-CPU, memory, GPU and sensors in one menu bar item: 228 KB on disk, about 11 MB of RAM, almost no CPU.</p>
+CPU, memory, GPU and sensors in one menu bar item: 200 KB on disk, about 10 MB of RAM, almost no CPU.</p>
 
 <p align="center">
   <img src="docs/popup-cpu-dark.png" width="230" alt="CPU tab">
@@ -19,12 +19,12 @@ the essentials well, looks at home on macOS, and stays out of the way:
 
 |                                  | Watcher         | A typical Swift monitor (Stats 3.0.17) |
 | -------------------------------- | --------------- | -------------------------------------- |
-| App size on disk                 | **228 KB**      | 18 MB                                  |
-| Memory, idle (Activity Monitor)  | **≈ 11 MB**     | 168–172 MB                             |
+| App size on disk                 | **200 KB**      | 18 MB                                  |
+| Memory, idle (Activity Monitor)  | **≈ 9 MB**      | 168–172 MB                             |
 | CPU, idle (% of one core)        | **0.1–0.3 %**   | ≈ 4 %                                  |
 
-<sub>Measured side by side on an Apple Silicon MacBook Pro running macOS 27. Watcher reaches ≈ 20 MB once its
-popup has been opened, and up to ≈ 1 % CPU with live core bars on a busy machine.</sub>
+<sub>Measured side by side on an Apple Silicon MacBook Pro running macOS 27. Watcher stays at about 10 MB while
+its popup is open and after it closes, and uses up to ≈ 1 % CPU with live core bars on a busy machine.</sub>
 
 Watcher is **free and open source** under the MIT License. There are no accounts, no telemetry and no ads,
 and it never connects to the internet.
@@ -56,7 +56,7 @@ setting.
 
 ## Install
 
-Watcher runs on Apple Silicon Macs (M1 to M5) with macOS 13 or later.
+Watcher runs on Apple Silicon Macs (M1 to M5) with macOS 27 or later.
 
 **Download:** grab `Watcher.zip` from the [latest release](../../releases/latest), unzip it and move
 `Watcher.app` to Applications. The app is not notarized by Apple, so the first time you open it macOS will
@@ -78,7 +78,8 @@ the ••• button in the popup) for Launch at Login, Activity Monitor, About 
 - **Native all the way down.** A C++20 core reads the kernel directly: `host_processor_info` for per-core
   ticks, `host_statistics64` for memory, the GPU driver's `PerformanceStatistics` in the IORegistry, and the
   AppleSMC user client for fans, temperatures and power. A thin Objective-C++ layer owns the menu bar, and
-  everything is drawn with CoreGraphics and CoreText. No third-party libraries, no web views.
+  everything is drawn with CoreGraphics and CoreText. No third-party libraries, no web views. It is built for
+  macOS 27 only, with link-time optimisation and without C++ exceptions or RTTI.
 - **Only what's on screen is measured.** Temperatures, fans and power are read only while the Sensors tab is
   open (or its number is in the menu bar); processes only while the CPU or RAM tab is open.
 - **Cheap process lists.** CPU uses `ps`. Memory reads your own processes straight from `libproc`, and asks
@@ -86,9 +87,10 @@ the ••• button in the popup) for Launch at Login, Activity Monitor, About 
   every 15 seconds.
 - **Lazy repaints.** The menu bar repaints at once for real jumps and coalesces small wiggles to one repaint
   every two seconds; each repaint costs more than all the sampling, because macOS re-snapshots status items.
-- **A disposable popup.** It sits on the system's own popover material, its contents are drawn into an 8-bit
-  layer (wide-gamut colours would otherwise double its memory), and the window is destroyed as soon as it
-  closes.
+- **A disposable popup.** It sits on the system's own popover material. Its contents are drawn on the CPU into
+  a plain image in the display's colour space, which Core Animation shows as is: letting AppKit draw it would
+  make Core Animation render on the GPU from inside Watcher, which loads Metal and holds on to ≈ 6 MB for good.
+  The window is destroyed as soon as it closes.
 
 ## Tested for leaks
 
